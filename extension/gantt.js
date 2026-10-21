@@ -96,16 +96,28 @@
     if (a in VIEWS) { st.view = a; save(); render(); scrollToday(); }
     else if (a === "today") scrollToday(true);
     else if (a === "done") { st.hideDone = !st.hideDone; save(); render(); }
-    else if (a === "full") { st.full = !st.full; place(); }
+    else if (a === "full") setFull(!st.full);
   });
-  addEventListener("keydown", e => { if (e.key === "Escape" && st.full) { st.full = false; place(); } });
+  addEventListener("keydown", e => { if (e.key === "Escape" && st.full) setFull(false); });
 
   let DATA = null, loadedFor = "", loading = false, error = "", geom = null, lastView = null;
 
-  function place() {
+  // Full screen mounts the chart on <body>: inside the content area a fixed box would sit under Plane's header
+  // (and ancestors with container queries can trap position: fixed).
+  function mount(area) {
+    const target = st.full ? document.body : area;
+    if (!target || root.parentElement === target) return false;
     Object.assign(root.style, st.full
-      ? { position: "fixed", inset: "0", zIndex: "25" }
+      ? { position: "fixed", inset: "0", zIndex: "2147483000" }
       : { position: "absolute", inset: "0", zIndex: "4" });
+    if (!st.full) target.style.position = "relative";
+    target.appendChild(root);
+    return true;
+  }
+  function setFull(v) {
+    st.full = v;
+    mount(contentArea());
+    render();
   }
 
   function toolbar(count) {
@@ -158,7 +170,7 @@
           body += `<div class="h-full overflow-hidden outline-[0.25px] outline-subtle${today ? " bg-accent-primary/20" : ""}" style="width:${dw}px">${we ? '<div class="h-full bg-surface-2 outline-[0.25px] outline-strong"></div>' : ""}</div>`;
         }
         cols += `<div class="relative flex flex-col outline-[0.25px] outline-subtle-1">
-          <div class="sticky top-0 z-[5] w-full flex-shrink-0 bg-surface-1 outline-[1px] outline-subtle-1" style="height:${HEAD}px">
+          <div class="sticky top-0 w-full flex-shrink-0 bg-surface-1 outline-[1px] outline-subtle-1" style="height:${HEAD}px;z-index:8">
             <div class="inline-flex h-7 w-full justify-between"><div class="sticky z-[1] m-1 flex items-center bg-surface-1 px-3 py-1 text-13 font-regular whitespace-nowrap text-secondary capitalize" style="left:${SIDEBAR}px">${MON[dEnd.getUTCMonth()]} ${dEnd.getUTCFullYear()}</div><div class="sticky px-3 py-2 text-11 whitespace-nowrap text-placeholder capitalize">Week ${isoWeek(n2d(n + 1))}</div></div>
             <div class="flex h-5 w-full">${days}</div></div>
           <div class="flex h-full w-full flex-grow bg-surface-1">${body}</div></div>`;
@@ -190,7 +202,7 @@
       top = unitsTop.map(u => `<div class="flex outline-[0.5px] outline-subtle-1" style="width:${(u.to - u.from + 1) * dw}px"><div class="sticky z-[1] m-1 flex items-center bg-surface-1 px-3 py-1 text-14 font-regular whitespace-nowrap text-secondary capitalize" style="left:${SIDEBAR}px">${u.title}</div></div>`).join("");
       bottom = unitsBottom.map(u => `<div class="flex flex-shrink-0 justify-between px-2 py-1 text-center capitalize outline-[0.25px] outline-subtle-1${u.today ? " bg-accent-primary/20" : ""}" style="width:${(u.to - u.from + 1) * dw}px"><div class="space-x-1 text-11 font-medium text-placeholder"><span class="${u.today ? "rounded-sm bg-accent-primary px-1 text-on-color" : ""}">${u.title}</span></div></div>`).join("");
       cols = `<div class="relative flex flex-col outline-[0.25px] outline-subtle-1" style="width:${W}px">
-        <div class="sticky top-0 z-[5] w-full flex-shrink-0 bg-surface-1 outline-[1px] outline-subtle-1" style="height:${HEAD}px"><div class="flex h-7">${top}</div><div class="flex h-5 w-full">${bottom}</div></div>
+        <div class="sticky top-0 w-full flex-shrink-0 bg-surface-1 outline-[1px] outline-subtle-1" style="height:${HEAD}px;z-index:8"><div class="flex h-7">${top}</div><div class="flex h-5 w-full">${bottom}</div></div>
         <div class="flex h-full w-full flex-grow bg-surface-1">${unitsBottom.map(u => `<div class="h-full overflow-hidden outline-[0.25px] outline-subtle${u.today ? " bg-accent-primary/20" : ""}" style="width:${(u.to - u.from + 1) * dw}px"></div>`).join("")}</div></div>`;
     }
 
@@ -249,7 +261,7 @@
   function tick() {
     const r = route(), sw = r && switcher();
     if (!r || !sw) {
-      btn.remove(); root.remove();
+      btn.remove(); root.remove(); st.full = false;
       if (!r) loadedFor = "";
       return;
     }
@@ -269,13 +281,10 @@
     const cls = on ? BTN_ON : BTN_OFF;
     if (btn.className !== cls) { btn.className = cls; btn.innerHTML = icon(on ? "text-primary" : "text-secondary"); }
     sw.classList.toggle("pg-on", on);
-    if (!on) { root.remove(); return; }
+    if (!on) { root.remove(); st.full = false; return; }
     const area = contentArea();
-    if (!area) return;
-    if (root.parentElement !== area) {
-      area.style.position = "relative";
-      place();
-      area.appendChild(root);
+    if (!area && !st.full) return;
+    if (mount(area)) {
       render();
       if (DATA) scrollToday();
     }
