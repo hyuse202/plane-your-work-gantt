@@ -118,6 +118,7 @@
     st.full = v;
     mount(contentArea());
     render();
+    scrollToday();
   }
 
   function toolbar(count) {
@@ -240,10 +241,15 @@
       </div>`;
     if (keep) { const sc = root.querySelector(".pg-scroll"); sc.scrollTop = keep[1]; if (keep[2]) sc.scrollLeft = keep[0]; }
   }
+  // Centre today in the visible part of the timeline (the sticky sidebar covers the first SIDEBAR px).
+  // Runs after layout, because the container may just have been moved or resized (e.g. full screen).
   function scrollToday(smooth) {
-    const sc = root.querySelector(".pg-scroll");
-    if (!sc || !geom) return;
-    sc.scrollTo({ left: Math.max(0, geom.x(TODAY) - VIEWS[st.view] * 7), behavior: smooth ? "smooth" : "auto" });
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const sc = root.querySelector(".pg-scroll");
+      if (!sc || !geom) return;
+      const left = geom.x(TODAY) + VIEWS[st.view] / 2 - (sc.clientWidth - SIDEBAR) / 2;
+      sc.scrollTo({ left: Math.max(0, left), behavior: smooth ? "smooth" : "auto" });
+    }));
   }
 
   async function ensureData(r) {
