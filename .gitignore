@@ -1,0 +1,17 @@
+# Secrets
+.env
+*.env
+!.env.example
+
+# Generated charts contain real work item data
+*.html
+!extension/*.html
+!exporter/template.html
+
+# Packaged extension
+*.zip
+*.crx
+*.pem
+
+__pycache__/
+.DS_Store

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plane Your Work Gantt: settings</title>
+<style>
+:root{--bg:#f7f7f8;--panel:#fff;--line:#e4e4e7;--text:#18181b;--muted:#71717a;--accent:#3f76ff;--danger:#dc2626}
+@media (prefers-color-scheme:dark){:root{--bg:#121214;--panel:#1a1a1d;--line:#2a2a2f;--text:#ececef;--muted:#9a9aa3}}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:640px;margin:40px auto;padding:0 16px}
+h1{font-size:20px;margin:0 0 4px}
+p{color:var(--muted);margin:0 0 20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+form{display:flex;gap:8px}
+input{flex:1;font:inherit;color:inherit;background:transparent;border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+button{font:inherit;border-radius:6px;padding:8px 14px;border:1px solid var(--line);background:transparent;color:inherit;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+ul{list-style:none;padding:0;margin:16px 0 0}
+li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+li code{word-break:break-all}
+.status{font-size:12px;color:var(--muted)}
+.err{color:var(--danger);margin-top:10px;min-height:1.5em}
+</style>
+</head>
+<body>
+<main>
+  <h1>Plane Your Work Gantt</h1>
+  <p>Add the URL of your Plane instance. The extension only gets access to the sites listed here.</p>
+  <div class="card">
+    <form id="add">
+      <input id="url" type="url" placeholder="https://plane.example.com" required>
+      <button class="primary" type="submit">Add</button>
+    </form>
+    <div class="err" id="err"></div>
+    <ul id="list"></ul>
+  </div>
+  <p style="margin-top:16px">After adding, reload your Plane tab and open <b>Your work</b>. A Gantt button appears next to the List/Board layout switcher.</p>
+</main>
+<script src="options.js"></script>
+</body>
+</html>

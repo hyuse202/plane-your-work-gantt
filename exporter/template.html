@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plane Gantt</title>
+<style>
+:root{--bg:#f7f7f8;--panel:#fff;--line:#e4e4e7;--grid:#f0f0f2;--weekend:#f4f4f6;--text:#18181b;--muted:#71717a;--today:#ef4444;--chip:#f4f4f5;--accent:#3f76ff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121214;--panel:#1a1a1d;--line:#2a2a2f;--grid:#202024;--weekend:#1d1d21;--text:#ececef;--muted:#9a9aa3;--chip:#26262b}}
+:root[data-theme="dark"]{--bg:#121214;--panel:#1a1a1d;--line:#2a2a2f;--grid:#202024;--weekend:#1d1d21;--text:#ececef;--muted:#9a9aa3;--chip:#26262b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+h1{font-size:15px;margin:0 8px 0 0}
+.muted{color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+button,.chip{font:inherit;color:inherit;background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:3px 9px;cursor:pointer}
+.chip[aria-pressed="false"]{opacity:.4;text-decoration:line-through}
+button.on{border-color:var(--accent);color:var(--accent)}
+label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+#wrap{overflow:auto;height:calc(100vh - 58px)}
+#gantt{position:relative}
+.row{display:flex;height:30px;border-bottom:1px solid var(--grid)}
+.row.group{height:30px;background:var(--panel);font-weight:600;position:sticky;z-index:2}
+.left{position:sticky;left:0;z-index:3;background:var(--panel);width:340px;min-width:340px;border-right:1px solid var(--line);padding:0 10px;display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap}
+.left a{color:inherit;text-decoration:none;overflow:hidden;text-overflow:ellipsis}
+.left a:hover{text-decoration:underline}
+.key{color:var(--muted);font-size:11px;min-width:96px}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.track{position:relative;flex:none}
+.bar{position:absolute;top:6px;height:18px;border-radius:4px;font-size:11px;line-height:18px;padding:0 6px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:clip;text-decoration:none;cursor:pointer;min-width:6px}
+.bar span{text-shadow:0 1px 1px rgba(0,0,0,.35)}
+.bar.overdue{outline:2px solid var(--today);outline-offset:1px}
+.bar.done{opacity:.45}
+.head{position:sticky;top:0;z-index:4;display:flex;background:var(--panel);border-bottom:1px solid var(--line);height:44px}
+.head .left{z-index:5;font-weight:600}
+.scale{position:relative;flex:none}
+.scale div{position:absolute;font-size:11px;color:var(--muted);white-space:nowrap}
+.bg{position:absolute;top:0;bottom:0;pointer-events:none}
+.todayline{position:absolute;top:0;bottom:0;width:2px;background:var(--today);pointer-events:none;z-index:1}
+#undated{padding:16px;max-width:900px}
+#undated li{margin:3px 0}
+#undated a{color:inherit}
+.tip{position:fixed;z-index:10;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;box-shadow:0 6px 24px rgba(0,0,0,.18);pointer-events:none;max-width:360px;display:none}
+@media (max-width:700px){.left{width:180px;min-width:180px}.key{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Work items of <span id="who">__WHO__</span></h1>
+  <span class="muted" id="count"></span>
+  <div class="chips" id="projects"></div>
+  <label><input type="checkbox" id="hideDone" checked> Hide completed</label>
+  <span>Group: <button data-g="project" class="on">Project</button> <button data-g="group">State</button> <button data-g="none">None</button></span>
+  <span>Zoom: <button data-z="34">Day</button> <button data-z="16" class="on">Week</button> <button data-z="6">Month</button></span>
+  <button id="toToday">Today</button>
+  <span class="muted">Generated: __TODAY__</span>
+</header>
+<div id="wrap"><div id="gantt"></div><div id="undated"></div></div>
+<div class="tip" id="tip"></div>
+<script>
+const DATA = __DATA__;
+const TODAY = "__TODAY__";
+const GROUPS = ["started","unstarted","backlog","completed","cancelled"];
+const GNAME = {started:"Started",unstarted:"Unstarted",backlog:"Backlog",completed:"Completed",cancelled:"Cancelled"};
+const DAY = 864e5, LEFT = 340;
+const store = {get(k,d){try{const v=localStorage.getItem("pg_"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("pg_"+k,JSON.stringify(v))}catch(e){}}};
+let st = {zoom:store.get("zoom",16), group:store.get("group","project"), hideDone:store.get("hideDone",true), off:store.get("off",[])};
+const d2n = s => Math.round(Date.parse(s+"T00:00:00Z")/DAY);
+const n2d = n => new Date(n*DAY);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const todayN = d2n(TODAY);
+
+const projects = [...new Set(DATA.map(r=>r.project))].sort();
+const pEl = document.getElementById("projects");
+projects.forEach(p=>{const b=document.createElement("button");b.className="chip";b.textContent=p;b.title=DATA.find(r=>r.project===p).projectName;
+  b.setAttribute("aria-pressed",!st.off.includes(p));b.onclick=()=>{st.off=st.off.includes(p)?st.off.filter(x=>x!==p):[...st.off,p];b.setAttribute("aria-pressed",!st.off.includes(p));save();render()};pEl.appendChild(b)});
+document.getElementById("hideDone").checked=st.hideDone;
+document.getElementById("hideDone").onchange=e=>{st.hideDone=e.target.checked;save();render()};
+document.querySelectorAll("[data-z]").forEach(b=>{b.classList.toggle("on",+b.dataset.z===st.zoom);b.onclick=()=>{st.zoom=+b.dataset.z;document.querySelectorAll("[data-z]").forEach(x=>x.classList.toggle("on",x===b));save();render();toToday()}});
+document.querySelectorAll("[data-g]").forEach(b=>{b.classList.toggle("on",b.dataset.g===st.group);b.onclick=()=>{st.group=b.dataset.g;document.querySelectorAll("[data-g]").forEach(x=>x.classList.toggle("on",x===b));save();render()}});
+document.getElementById("toToday").onclick=toToday;
+function save(){for(const k in st)store.set(k,st[k])}
+
+function visible(){return DATA.filter(r=>!st.off.includes(r.project)&&!(st.hideDone&&(r.group==="completed"||r.group==="cancelled")))}
+function span(r){let s=r.start?d2n(r.start):null,e=r.due?d2n(r.due):null;if(s==null)s=e;if(e==null)e=s;if(e<s)[s,e]=[e,s];return [s,e]}
+
+function render(){
+  const rows=visible(), dated=rows.filter(r=>r.start||r.due), undated=rows.filter(r=>!r.start&&!r.due);
+  document.getElementById("count").textContent=`${rows.length} work items · ${undated.length} without dates`;
+  const Z=st.zoom;
+  let min=todayN-7,max=todayN+21;
+  dated.forEach(r=>{const[s,e]=span(r);min=Math.min(min,s-3);max=Math.max(max,e+3)});
+  const W=(max-min+1)*Z, x=n=>(n-min)*Z;
+  // grouping
+  let groups;
+  if(st.group==="project")groups=projects.map(p=>[p+" · "+(DATA.find(r=>r.project===p).projectName),dated.filter(r=>r.project===p)]);
+  else if(st.group==="group")groups=GROUPS.map(g=>[GNAME[g],dated.filter(r=>r.group===g)]);
+  else groups=[[null,dated]];
+  groups=groups.filter(g=>g[1].length).map(([n,l])=>[n,l.sort((a,b)=>span(a)[0]-span(b)[0]||span(a)[1]-span(b)[1])]);
+  // time scale
+  let scale="",bg="";
+  for(let n=min;n<=max;n++){const d=n2d(n),dow=d.getUTCDay(),dd=d.getUTCDate();
+    if(dow===0||dow===6)bg+=`<div class="bg" style="left:${LEFT+x(n)}px;width:${Z}px;background:var(--weekend)"></div>`;
+    if(dd===1||n===min)scale+=`<div style="left:${x(n)+3}px;top:4px;font-weight:600;color:var(--text)">Th${d.getUTCMonth()+1}/${d.getUTCFullYear()}</div>`;
+    if(Z>=16?true:dow===1){if(Z>=16||dow===1)scale+=`<div style="left:${x(n)+2}px;top:24px">${Z>=16?dd:dd+"/"+(d.getUTCMonth()+1)}</div>`}
+    if(dd===1)bg+=`<div class="bg" style="left:${LEFT+x(n)}px;width:1px;background:var(--line)"></div>`;
+  }
+  let h=`<div class="head"><div class="left">Task</div><div class="scale" style="width:${W}px">${scale}</div></div>`;
+  for(const[name,list]of groups){
+    if(name)h+=`<div class="row group" style="top:44px"><div class="left">${esc(name)} <span class="muted">(${list.length})</span></div><div class="track" style="width:${W}px"></div></div>`;
+    for(const r of list){const[s,e]=span(r),done=r.group==="completed"||r.group==="cancelled",over=!done&&e<todayN;
+      const i=DATA.indexOf(r);
+      h+=`<div class="row"><div class="left"><span class="dot" style="background:${esc(r.color)}"></span><span class="key">${esc(r.key)}</span><a href="${esc(r.url)}" target="_blank" title="${esc(r.name)}">${esc(r.name)}</a></div>`+
+        `<div class="track" style="width:${W}px"><a class="bar${done?" done":""}${over?" overdue":""}" data-i="${i}" href="${esc(r.url)}" target="_blank" style="left:${x(s)}px;width:${(e-s+1)*Z-2}px;background:${esc(r.color)}"><span>${Z>=16&&(e-s+1)*Z>60?esc(r.key):""}</span></a></div></div>`}
+  }
+  const g=document.getElementById("gantt");
+  g.style.width=(LEFT+W)+"px";
+  g.innerHTML=bg+`<div class="todayline" style="left:${LEFT+x(todayN)+Z/2}px"></div>`+h;
+  document.getElementById("undated").innerHTML=undated.length?`<h3>No dates (${undated.length})</h3><ul>${undated.map(r=>`<li><span class="dot" style="display:inline-block;background:${esc(r.color)}"></span> <span class="key">${esc(r.key)}</span> <a href="${esc(r.url)}" target="_blank">${esc(r.name)}</a> <span class="muted">· ${esc(r.state)}</span></li>`).join("")}</ul>`:"";
+  render.x=x;
+}
+function toToday(){const w=document.getElementById("wrap");w.scrollLeft=Math.max(0,render.x(todayN)-200)}
+const tip=document.getElementById("tip");
+document.addEventListener("mouseover",e=>{const b=e.target.closest(".bar");if(!b){tip.style.display="none";return}const r=DATA[b.dataset.i];
+  tip.innerHTML=`<b>${esc(r.key)}</b> ${esc(r.name)}<br><span class="muted">${esc(r.state)} · priority ${esc(r.priority)}<br>${esc(r.start||"?")} → ${esc(r.due||"?")}</span>`;tip.style.display="block"});
+document.addEventListener("mousemove",e=>{tip.style.left=Math.min(e.clientX+14,innerWidth-370)+"px";tip.style.top=(e.clientY+14)+"px"});
+render();toToday();
+</script>
+</body>
+</html>

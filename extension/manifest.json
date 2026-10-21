@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Plane Your Work Gantt",
+  "version": "1.0.0",
+  "description": "Adds a cross-project Gantt layout to the \"Your work\" page of self-hosted Plane.",
+  "permissions": ["scripting", "storage"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": { "service_worker": "background.js" },
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "action": { "default_title": "Plane Your Work Gantt: settings" }
+}
