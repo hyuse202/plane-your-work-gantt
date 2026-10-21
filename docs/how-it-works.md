@@ -33,6 +33,10 @@ The manifest declares no host permissions. When you add `https://plane.example.c
 
 Workspace slug, user id and tab come from the URL: `/{slug}/profile/{userId}/{assigned|created|subscribed}`. No API key is involved, and only `GET` requests are made.
 
+### Freshness
+
+Plane doesn't push work item changes to the browser. The chart fetches its data each time it is opened: clicking the Gantt button, reloading the page, or switching between Assigned / Created / Subscribed. When you reopen it, the old data is replaced in place and the scroll position is kept. The toolbar shows the time of the last update. There is no background polling. Each load costs 2 requests plus one per 100 work items.
+
 ### Placement in the page
 
 Plane is a React single-page app that hydrates the whole document. Inserting nodes before hydration finishes triggers React error #418, and React re-renders the page and wipes them. So the script:

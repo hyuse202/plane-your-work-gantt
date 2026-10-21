@@ -21,8 +21,8 @@
   const d2n = s => Math.round(Date.parse(s.slice(0, 10) + "T00:00:00Z") / DAY);
   const n2d = n => new Date(n * DAY);
   const pad = n => String(n).padStart(2, "0");
-  const now = new Date();
-  const TODAY = d2n(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`);
+  const today = () => { const d = new Date(); return d2n(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`); };
+  let TODAY = today();
   const store = {
     get(k, d) { try { const v = localStorage.getItem("planeGantt_" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem("planeGantt_" + k, JSON.stringify(v)); } catch (e) {} },
@@ -85,7 +85,7 @@
   const btn = document.createElement("button");
   btn.type = "button";
   btn.title = "Gantt chart";
-  btn.onclick = () => { st.active = true; save(); tick(); };
+  btn.onclick = () => { st.active = true; save(); wantRefresh = true; tick(); };
 
   const root = document.createElement("div");
   root.className = "pg-root flex flex-col bg-surface-1";
@@ -100,7 +100,7 @@
   });
   addEventListener("keydown", e => { if (e.key === "Escape" && st.full) setFull(false); });
 
-  let DATA = null, loadedFor = "", loading = false, error = "", geom = null, lastView = null;
+  let DATA = null, loadedFor = "", loading = false, error = "", geom = null, lastView = null, fetchedAt = null, wantRefresh = false;
 
   // Full screen mounts the chart on <body>: inside the content area a fixed box would sit under Plane's header
   // (and ancestors with container queries can trap position: fixed).
@@ -123,7 +123,7 @@
 
   function toolbar(count) {
     return `<div class="px-page-x relative flex w-full flex-shrink-0 flex-wrap items-center gap-2 bg-surface-1 py-2 whitespace-nowrap" style="height:40px">
-      <div class="ml-auto"><div class="ml-auto text-11 font-medium text-tertiary">${count} Work items</div></div>
+      <div class="ml-auto"><div class="ml-auto text-11 font-medium text-tertiary">${count} Work items${fetchedAt ? ` · updated ${pad(fetchedAt.getHours())}:${pad(fetchedAt.getMinutes())}` : ""}</div></div>
       <div class="flex flex-wrap items-center gap-2">
         <div data-act="done" class="${CHIP(st.hideDone)}">Hide completed</div>
         ${Object.keys(VIEWS).map(v => `<div data-act="${v}" class="${CHIP(st.view === v)}">${v[0].toUpperCase() + v.slice(1)}</div>`).join("")}
@@ -141,7 +141,7 @@
 
   function render() {
     if (!root.isConnected) return;
-    if (loading || error || !DATA) {
+    if (!DATA) {
       root.innerHTML = toolbar(DATA ? DATA.length : 0) + `<div class="grid h-full w-full place-items-center text-13 text-tertiary">${error ? "Could not load work items: " + esc(error) : "Loading…"}</div>`;
       return;
     }
@@ -252,13 +252,26 @@
     }));
   }
 
+  // Data is fetched each time the Gantt is opened (button click, page load, tab change).
+  // First load shows "Loading…" and centres on today; a reopen swaps the data in place and keeps the scroll.
   async function ensureData(r) {
     const key = `${r.uid}/${r.mode}`;
-    if (loadedFor === key || loading) return;
-    loadedFor = key; loading = true; error = ""; DATA = null; render();
-    try { DATA = await load(r.slug, r.uid, r.mode); }
-    catch (e) { error = e.message; loadedFor = ""; }
-    loading = false; render(); scrollToday();
+    if (loading) return;
+    const first = loadedFor !== key;
+    if (!first && !wantRefresh) return;
+    wantRefresh = false;
+    loadedFor = key; loading = true; error = "";
+    if (first) { DATA = null; fetchedAt = null; render(); }
+    try {
+      const d = await load(r.slug, r.uid, r.mode);
+      if (loadedFor === key) { DATA = d; fetchedAt = new Date(); TODAY = today(); }
+    } catch (e) {
+      if (first) { error = e.message; loadedFor = ""; }
+      // on a failed reopen, keep showing the last data
+    }
+    loading = false;
+    render();
+    if (first) scrollToday();
   }
 
   // ------------------------------------------------------------ keep in sync with the page (Plane is an SPA and React may re-render)

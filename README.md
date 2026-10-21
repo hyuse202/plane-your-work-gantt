@@ -17,6 +17,7 @@ It comes in two parts:
 - Looks like Plane's native Gantt: Week / Month / Quarter scales, *Today*, full screen, same colours, light and dark theme.
 - Bars use each item's state colour. Items without dates are listed at the bottom.
 - *Hide completed* toggle, on by default.
+- Fresh data every time you open the Gantt (button click, page reload or switching tabs). The toolbar shows when it was last updated.
 - Works on any member's profile page, not only yours.
 - Read-only: the extension never changes data in Plane.
 - No API key and no hard-coded domain. The extension uses your existing Plane session and only gets access to the instance URLs you add.
