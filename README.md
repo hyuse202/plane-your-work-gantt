@@ -26,13 +26,15 @@ It comes in two parts:
 
 The extension is not on the Chrome Web Store yet, so you load it unpacked:
 
-1. Download this repository (`git clone` or *Code › Download ZIP*).
+1. **[Download the latest extension (.zip)](https://github.com/hyuse202/plane-your-work-gantt/releases/latest/download/plane-your-work-gantt-extension.zip)** and unzip it. All versions are on the [Releases](https://github.com/hyuse202/plane-your-work-gantt/releases) page.
 2. Open `chrome://extensions` (or `brave://extensions`, `edge://extensions`) and turn on **Developer mode**.
-3. Click **Load unpacked** and select the `extension` folder.
+3. Click **Load unpacked** and select the unzipped `plane-your-work-gantt-extension` folder. Keep the folder: the browser loads the extension from it.
 4. The settings page opens. Enter your Plane URL (for example `https://plane.example.com`), click **Add**, then allow access.
 5. Reload Plane and go to **Your work**. A Gantt icon appears next to the List and Board icons.
 
-To change instances later, click the extension icon in the toolbar. To update after a `git pull`, click ↻ on the extension card and reload Plane.
+To change instances later, click the extension icon in the toolbar.
+
+**Updating:** download the new zip and unzip it over the same folder, then click ↻ on the extension card and reload Plane. If you cloned the repo instead, `git pull` and load the `extension` folder.
 
 ## Use the exporter
 
@@ -67,4 +69,4 @@ Built and tested against **Plane Community Edition v1.4.0** (self-hosted). The e
 
 ### Tiếng Việt (tóm tắt)
 
-Extension trình duyệt thêm nút **Gantt** cạnh nút List/Board ở trang *Your work* của Plane, hiển thị task của **mọi project** trên một timeline, giao diện giống Gantt gốc. Cài bằng *Load unpacked* thư mục `extension`, rồi nhập URL Plane của bạn ở trang cài đặt. Script `exporter/` xuất Gantt ra file HTML, cấu hình qua `.env`.
+Extension trình duyệt thêm nút **Gantt** cạnh nút List/Board ở trang *Your work* của Plane, hiển thị task của **mọi project** trên một timeline, giao diện giống Gantt gốc. Tải file zip ở mục [Releases](https://github.com/hyuse202/plane-your-work-gantt/releases/latest), giải nén, rồi cài bằng *Load unpacked* thư mục vừa giải nén, rồi nhập URL Plane của bạn ở trang cài đặt. Script `exporter/` xuất Gantt ra file HTML, cấu hình qua `.env`.
